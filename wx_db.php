@@ -18,8 +18,7 @@ class WXDB
         // Error: can't locate default socket
         // When I specifed socket location, Error: can't open this path  
         $mysql_conn=mysql_connect(HOST,DBUSER,DBPASSWD,DB);
-        if (!$mysql_conn) 
-        {
+        if (!$mysql_conn) {
             $debug->appendLog("[Error] failed to connect MYSQL:".mysql_error());
             return false;
         } else {
@@ -33,16 +32,17 @@ class WXDB
     static function execSQL($conn,$sql,$debug)
     {
         $result=mysql_query($sql,$conn);
-        if (!$result)
-        {
+        if (!$result) {
             $debug->appendLog("[Error] failed to excute SQL: $sql\n"
-            .mysql_error());
+                .mysql_error());
+            return false;
         } else {
             $debug->appendLog("successed to excute SQL: $sql");
+            return true;
         }
     }
 
-    static function disconnect($conn,$debug)
+    static function close($conn,$debug)
     {
         mysql_close($conn);
         $debug->appendLog("disconnect from MYSQL");

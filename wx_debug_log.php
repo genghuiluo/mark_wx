@@ -31,8 +31,7 @@ class WXDebugLog
     function saveLog()
     {
         $logfile=$this->logfile_path.'/'.$this->logfile_name;
-        if ($f = fopen($logfile,'a+'))
-        {
+        if ($f = fopen($logfile,'a+')) {
             fputs($f,$this->detail);
             fclose($f);
         }

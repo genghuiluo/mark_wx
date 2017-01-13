@@ -12,17 +12,18 @@
 
 class WXMessage
 {
-    var $ciphertext_xml; 
-    var $plaintext_xml;
-    var $msg_sign;
-    var $timestamp;
-    var $nonce;
+    public $ciphertext_xml; 
+    public $plaintext_xml;
+    protected $plaintext_arr;
+    protected $msg_sign;
+    protected $timestamp;
+    protected $nonce;
 
     function WXMessage($raw_xml,$msg_sign=false,$timestamp=false,$nonce=false)
     {
-        if (!$msg_sign || !$timestamp || !$nonce)
-        {
+        if (!$msg_sign || !$timestamp || !$nonce) {
             $this->plaintext_xml=$raw_xml;
+            $this->set_plaintext_arr();
         } else {
             $this->ciphertext_xml=$raw_xml;
             $this->msg_sign=$msg_sign;
@@ -31,14 +32,14 @@ class WXMessage
         }
     }
 
-    function decrypt($encrypt_wiz,$debug)
+    public function decrypt($encrypt_wiz,$debug)
     {
-        if (!$this->msg_sign || !$this->timestamp || !$this->nonce || !$this->ciphertext_xml)
-        {
+        if (!$this->msg_sign || !$this->timestamp || !$this->nonce || !$this->ciphertext_xml) {
             return false;
         } else {
             $err_code=$encrypt_wiz->decryptMsg($this->msg_sign,$this->timestamp,$this->nonce,$this->ciphertext_xml,$this->plaintext_xml);
             if ($err_code == 0) {
+                $this->set_plaintext_arr();
                 $debug->appendLog("decrypted plaintext xml:\n$this->plaintext_xml");
                 return true;
             } else {
@@ -48,10 +49,9 @@ class WXMessage
         }
     }
 
-    function encrypt($encrypt_wiz,$debug)
+    public function encrypt($encrypt_wiz,$debug)
     {
-        if (!$this->timestamp || !$this->nonce || !$this->plaintext_xml)
-        {
+        if (!$this->timestamp || !$this->nonce || !$this->plaintext_xml) {
             return false;
         } else {
             $err_code=$encrypt_wiz->encryptMsg($this->plaintext_xml,$this->timestamp,$this->nonce,$this->ciphertext_xml);
@@ -65,40 +65,35 @@ class WXMessage
         }
     }
 
-    function genNonce()
+    public function getPorperty($porperty_name)
     {
-        return rand(100000000,999999999);
-    }
-
-    function getPorperty($key)
-    {
-        if ($this->plaintext_xml)
-        {
-            $xml=simplexml_load_string($this->plaintext_xml, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $json = json_encode($xml);
-            $arr = json_decode($json,TRUE);
-            return array_key_exists($key,$arr)? $arr[$key] : false;
+        if ($this->plaintext_arr) {
+            return array_key_exists($porperty_name,$this->plaintext_arr) ? $this->plaintext_arr[$porperty_name] : false;
         } else {
             return false;
         }
     }
 
-    function save($conn,$debug,$msg_type=false)
+    protected function genNonce()
     {
-        if (!$msg_type) {
-            $msg_type=$this->getPorperty('MsgType');
-        }
+        return rand(100000000,999999999);
+    }
 
-        switch($msg_type) {
-        case 'text':
-            $msg_content=$this->getPorperty('Content');
-            break;
-        default:
+    protected function set_plaintext_arr()
+    {
+        $tmp_xml=simplexml_load_string($this->plaintext_xml, 'SimpleXMLElement', LIBXML_NOCDATA);
+        $tmp_json=json_encode($tmp_xml);
+        $this->plaintext_arr=json_decode($tmp_json,TRUE);
+    }
+
+    public function save($conn,$debug,$msg_content)
+    {
+        if ($this->plaintext_arr) { 
+            $ins_sql=sprintf("INSERT INTO wx_message(from_wx_id,to_wx_id,msg_type,msg_content,msg_content_md5,create_dt) VALUES ('%s','%s','%s','%s',md5('%s'),now());",$this->plaintext_arr['FromUserName'],$this->plaintext_arr['ToUserName'],$this->plaintext_arr['MsgType'],addslashes($msg_content),addslashes($msg_content));
+            WXDB::execSQL($conn,$ins_sql,$debug);
+        } else {
             return false;
         }
-
-        $ins_sql=sprintf("INSERT INTO wx_message(from_wx_id,to_wx_id,msg_type,msg_content,msg_content_md5,create_dt) VALUES ('%s','%s','text','%s',md5('%s'),now());",$this->getPorperty('FromUserName'),$this->getPorperty('ToUserName'),addslashes($msg_content),addslashes($msg_content));
-        WXDB::execSQL($conn,$ins_sql,$debug);
     }
 }
 

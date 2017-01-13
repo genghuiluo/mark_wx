@@ -1,5 +1,6 @@
 wx_conf.php
 mark_wechat.sql
 .htaccess
+test.php
 
 debugLog/*.log

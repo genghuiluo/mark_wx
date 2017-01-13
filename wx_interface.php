@@ -10,6 +10,10 @@
 *
 ================================================================*/
 
+// uncomment this only when you try to verify server url at first time
+//echo $_GET['echostr'];
+//exit;
+
 require_once "wx_conf.php";
 include_once "wx_debug_log.php";
 include_once "wx_db.php";
@@ -18,10 +22,6 @@ include_once "wx_message.php";
 include_once "./wxEncrytLegacy/wxBizMsgCrypt.php";
 
 date_default_timezone_set('Asia/Shanghai');
-
-// verify server url at first time
-//echo $_GET['echostr'];
-//exit;
 
 $raw_post_data=file_get_contents('php://input') or die("<h1>illegal request!</h1>");
 
@@ -35,8 +35,7 @@ $debug->appendLog("received raw data:\n"
         // $HTTP_RAW_POST_DATA is deprecated in PHP 5.6.0
         .$raw_post_data);
 
-if (ENCRYPTMODE == 'safe')
-{
+if (ENCRYPTMODE == 'safe') {
     $msg=new WXMessage($raw_post_data,$_GET['msg_signature'],$_GET['timestamp'],$_GET['nonce']);
     $encrypt_wiz=new WXBizMsgCrypt(TOKEN,ENCODINGAESKEY,APPID);
     if(!$msg->decrypt($encrypt_wiz,$debug))
@@ -57,8 +56,7 @@ $reply=tulingBot($content,$tuling_user_id);
 // send encrypted msg
 $reply_msg=new WXTextMessage($reply,$my_wx_id,$subscriber_wx_id);
     
-if (ENCRYPTMODE == 'safe')
-{
+if (ENCRYPTMODE == 'safe') {
     $reply_msg->encrypt($encrypt_wiz,$debug);
     echo $reply_msg->ciphertext_xml; 
 } else {
@@ -67,8 +65,9 @@ if (ENCRYPTMODE == 'safe')
 
 $conn=WXDB::connect($debug);
 if ($conn) {
-    $msg->save($conn,$debug);
-    $reply_msg->save($conn,$debug);
+    $msg->save($conn,$debug,$content);
+    $reply_msg->save($conn,$debug,$reply);
+    WXDB::close($conn,$debug);
 }
 
 if (DEBUGMODE) {
