@@ -36,6 +36,7 @@ $debug->appendLog("received raw data:\n"
         .$raw_post_data);
 
 if (ENCRYPTMODE == 'safe') {
+    // decrypted msg
     $msg=new WXMessage($raw_post_data,$_GET['msg_signature'],$_GET['timestamp'],$_GET['nonce']);
     $encrypt_wiz=new WXBizMsgCrypt(TOKEN,ENCODINGAESKEY,APPID);
     if(!$msg->decrypt($encrypt_wiz,$debug))
@@ -48,25 +49,49 @@ if (ENCRYPTMODE == 'safe') {
 
 $subscriber_wx_id=$msg->getPorperty('FromUserName'); 
 $my_wx_id=$msg->getPorperty('ToUserName');
-$content=trim($msg->getPorperty('Content'));
+$msg_type=trim($msg->getPorperty('MsgType'));
 
-$tuling_user_id=preg_replace('/[^A-Za-z0-9]/','',$subscriber_wx_id);
-$reply=tulingBot($content,$tuling_user_id);
+// your response rules
+switch($msg_type) {
+case 'text':
+    $content=trim($msg->getPorperty('Content'));
+    $tuling_user_id=preg_replace('/[^A-Za-z0-9]/','',$subscriber_wx_id);
+    $reply=TulingBot::reply($content,$tuling_user_id,$debug);
+    $reply_msg=new WXTextMessage($reply,$my_wx_id,$subscriber_wx_id);
+    break;
+case 'event':
+    $content=$msg->getPorperty('Event');
+    switch($content) {
+    case 'subscribe':
+        $reply="欢迎关注我的公众号/:heart,这个公众号主要被我用于学习NLP(自然语言处理),内置了一个图灵AI可以进行对话,开始调戏它吧/:B-)";
+        $reply_msg=new WXTextMessage($reply,$my_wx_id,$subscriber_wx_id);
+    case 'unsubscribe':
+        break; 
+    default:
+        break;
+    }
+    break;
+default:
+    $content="unkown";
+    $reply="我还没想好怎么处理这个/:P-(";
+    $reply_msg=new WXTextMessage($reply,$my_wx_id,$subscriber_wx_id);
+}
 
-// send encrypted msg
-$reply_msg=new WXTextMessage($reply,$my_wx_id,$subscriber_wx_id);
-    
-if (ENCRYPTMODE == 'safe') {
-    $reply_msg->encrypt($encrypt_wiz,$debug);
-    echo $reply_msg->ciphertext_xml; 
-} else {
-    echo $reply_msg->plaintext_xml;
+if ($reply_msg) {
+    if (ENCRYPTMODE == 'safe') {
+        // send encrypted msg
+        $reply_msg->encrypt($encrypt_wiz,$debug);
+        echo $reply_msg->ciphertext_xml; 
+    } else {
+        echo $reply_msg->plaintext_xml;
+    }
 }
 
 $conn=WXDB::connect($debug);
 if ($conn) {
     $msg->save($conn,$debug,$content);
-    $reply_msg->save($conn,$debug,$reply);
+    if ($reply_msg)
+        $reply_msg->save($conn,$debug,$reply);
     WXDB::close($conn,$debug);
 }
 
