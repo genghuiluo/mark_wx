@@ -19,8 +19,8 @@
 
   ```
   # install a web server, e.g. apache/nginx
-  > cd your_web_root_dir
-  > git@github.com:genghuiluo/mark_wx.git
+  > cd <your_web_root_directory>
+  > git clone git@github.com:genghuiluo/mark_wx.git
   > cd mark_wx
   > cp wx_conf.sample.php wx_conf.php
   > vi wx_conf.php
@@ -48,3 +48,4 @@
     create_dt datetime, 
   primary key(msg_seq_id));
   ```
+9. follow your subscription and try to play with it
